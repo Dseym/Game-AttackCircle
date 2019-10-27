@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>123</title>
+	<script src="paper.js/dist/paper-full.js"></script>
+	<script type="text/paperscript" canvas="canv">
+		var horizont = 44,
+			vertical = 21,
+			pole = [],
+			structure = [],
+			money = 1,
+			inv = 0,
+			item = [],
+			base = -1,
+			notBullet = [[], []],
+			player = 1;
+
+		alert("Use only on computer.");
+		alert("Number 0 - generates money;\nNumber 1 - your base;\nNumber 2 - generates ammo on bomb;\nNumber 3 - bomb.");
+		alert("To put the building, hold the spacebar.");
+		alert("W, A, S, D - move.");
+		alert("To start, put the base. (Number 1)");
+
+		for(var i = 0; i < horizont; i++) {
+			for(var ii = 0; ii < vertical; ii++) {
+				var path = new Path();
+				path.add(new Point(i*31, ii*31));
+				path.add(new Point(i*31+31, ii*31));
+				path.add(new Point(i*31+31, ii*31+31));
+				path.add(new Point(i*31, ii*31+31));
+				path.strokeColor = 'black';
+				path.fillColor = 'white';
+				path.closed = true;
+				pole.push(path);
+			}
+		}
+		pole[player].fillColor = 'blue';
+
+		var timerr,
+			timerr2,
+			timerr3,
+			control = new Path.Circle({
+				center: 0,
+				radius: 3,
+				strokeColor: 'black',
+				visible: false,
+				fillColor: 'red'
+			}),
+			press = false;
+		document.addEventListener('keydown', function(event) {
+			if(event.code == "KeyW") {
+				if(player-1 < 0) return true;
+				pole[player].fillColor = 'white';
+				player -= 1;
+				pole[player].fillColor = 'blue';
+			} else if(event.code == "KeyS") {
+				if(player+1 > pole.length-1) return true;
+				pole[player].fillColor = 'white';
+				player += 1;
+				pole[player].fillColor = 'blue';
+			} else if(event.code == "KeyA") {
+				if(player-vertical < 0) return true;
+				pole[player].fillColor = 'white';
+				player -= vertical;
+				pole[player].fillColor = 'blue';
+			} else if(event.code == "KeyD") {
+				if(player+vertical > pole.length-1) return true;
+				pole[player].fillColor = 'white';
+				player += vertical;
+				pole[player].fillColor = 'blue';
+			} else if(event.code == "Space" && money > 0 && !press && ((inv == 1 && base == -1) || (inv != 1 && base != -1)) && player != base) {
+				timerr = setTimeout(function() {
+					pole[player].control = "player";
+					pole[player].structure = inv;
+					if(inv == 3) {
+						pole[player].ammo = 0;
+						pole[player].inWayBullet = false;
+					}
+					structure.push(player);
+					clearInterval(timerr2);
+					timerr3 = setInterval(function() {
+						control.scaling.x -= 0.5;
+						control.scaling.y -= 0.5;
+						if(control.scaling.x < 1) {
+							clearInterval(timerr3);
+							control.remove();
+						}
+					}, 100);
+					money -= 1;
+				}, 1000);
+				control.visible = true;
+				timerr2 = setInterval(function() {
+					control.position = pole[player].position;
+					control.scaling.x += 0.25;
+					control.scaling.y += 0.25;
+					control.fillColor.hue += 6;
+				}, 100);
+				press = true;
+			}
+			if(event.code.indexOf("Digit") > -1 && Number(event.code.split("Digit")[1]) < 4) {
+				inv = Number(event.code.split("Digit")[1]);
+			}
+		});
+		document.addEventListener('keyup', function(event) {
+			if(event.code == "Space") {
+				clearTimeout(timerr);
+				clearInterval(timerr2);
+				clearInterval(timerr3);
+				press = false;
+				control.remove();
+				control = new Path.Circle({
+					center: 0,
+					radius: 3,
+					strokeColor: 'black',
+					visible: false,
+					fillColor: 'red'
+				});
+			}
+		});
+		setInterval(function() {
+			for(var i = 0; i < pole.length; i++) {
+				if(pole[i].control == "player" && pole[i].fillColor == "white") {
+					switch(pole[i].structure) {
+						case 0: pole[i].fillColor = 'green'; break;
+						case 1: pole[i].fillColor = 'red'; base = i; break;
+						case 2: pole[i].fillColor = 'purple';  break;
+						case 3: pole[i].fillColor = 'orange'; break;
+					}
+				}
+			}
+			for(var i = 0; i < item.length; i++) {
+				if(item[i][1]-item[i][2] > 0) {
+					if(((item[i][1]-item[i][2])/vertical) % 1 == 0) {
+						item[i][2] += vertical;
+					} else {
+						if(item[i][1]-item[i][2] > (Math.round((item[i][1]-item[i][2])/vertical))*vertical) {
+							item[i][2] += 1;
+						} else {
+							item[i][2] -= 1;
+						}
+					}
+				} else {
+					if(((item[i][1]-item[i][2])/vertical) % 1 == 0) {
+						item[i][2] -= vertical;
+					} else {
+						if(item[i][1]-item[i][2] > (Math.round((item[i][1]-item[i][2])/vertical))*vertical) {
+							item[i][2] += 1;
+						} else {
+							item[i][2] -= 1;
+						}
+					}
+				}
+				item[i][3].position = pole[item[i][2]].position;
+				if(pole[item[i][2]].control == "player" && pole[item[i][2]].structure == 3 && item[i][0] == "enemy") {
+					if(pole[item[i][2]].ammo == 0) {
+						pole[item[i][2]].control = "";
+						pole[item[i][2]].fillColor = 'white';
+						structure.splice(structure.indexOf(item[i][2]), 1);
+					} else {
+						pole[item[i][2]].ammo -= 1;
+					}
+					item[i][3].remove();
+					item.splice(i, 1);
+				} else {
+					if(item[i][2] == item[i][1]) {
+						if(item[i][0] == "money") {
+							money += 1;
+						} else if(item[i][0] == "bullet") {
+							item[i][4].inWayBullet = false;
+							item[i][4].ammo = 1;
+						} else if(item[i][0] == "enemy") {
+							pole[item[i][1]].control = "";
+							pole[item[i][1]].fillColor = 'white';
+							structure.splice(structure.indexOf(item[i][1]), 1);
+							if(base == item[i][1]) {
+								alert("You LOSE!");
+							}
+						}
+						item[i][3].remove();
+						item.splice(i, 1);
+					}
+				}
+			}
+		}, 2200);
+		setInterval(function() {
+			for(var i = 0; i < pole.length; i++) {
+				if(pole[i].control == "player") {
+					if(pole[i].structure == 0 && base != -1) {
+						var path = new Path.Circle({
+							center: pole[i].position,
+							radius: 4,
+							fillColor: 'yellow',
+							strokeColor: 'black'
+						});
+						item.push(["money", base, i, path]);
+					} else if(pole[i].structure == 1) {
+						money += 1;
+					} else if(pole[i].structure == 2 && notBullet[0].length != 0) {
+						var path = new Path.Circle({
+							center: pole[i].position,
+							radius: 4,
+							fillColor: 'grey',
+							strokeColor: 'black'
+						});
+						item.push(["bullet", notBullet[0][0], i, path, notBullet[1][0]]);
+						notBullet[1][0].inWayBullet = true;
+						notBullet[0].splice(0, 1);
+						notBullet[1].splice(0, 1);
+					} else if(pole[i].structure == 3) {
+						if(pole[i].ammo == 0 && notBullet[0].indexOf(i) == -1 && !pole[i].inWayBullet) {
+							notBullet[0].push(i);
+							notBullet[1].push(pole[i]);
+						}
+					}
+				}
+			}
+		}, 3300);
+		setTimeout(function() {
+			var timee = 10000;
+			setInterval(function() {
+				if(structure.length != 0) {
+					var enemyPos = Math.floor(Math.random()*(vertical))+(vertical*horizont-(vertical*10)),
+						struct = Math.floor(Math.random()*structure.length),
+						path = new Path.Circle({
+							center: pole[enemyPos].position,
+							radius: 6,
+							fillColor: 'red',
+							strokeColor: 'black'
+						});
+						item.push(["enemy", structure[struct], enemyPos, path]);
+						if(timee > 4000) {
+							timee -= 200;
+						}
+				}
+			}, timee+100);
+		}, 1000);
+	</script>
+</head>
+<body>
+	<canvas id="canv" keepalive="false"></canvas>
+	<style type="text/css">
+		html, body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+		}
+
+		canvas {
+			width: 100%;
+			height: 99.4%;
+		}
+	</style>
+</body>
+</html>
